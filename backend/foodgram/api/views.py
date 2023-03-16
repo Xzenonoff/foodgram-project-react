@@ -24,8 +24,6 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TagSerializer
     pagination_class = None
 
-class CatsPagination(PageNumberPagination):
-    page_size = 20
 
 class UserViewSet(viewsets.GenericViewSet,
                   mixins.ListModelMixin,
