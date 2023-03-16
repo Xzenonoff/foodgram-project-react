@@ -8,7 +8,7 @@ SECRET_KEY = "django-insecure-f$=t9x%r+lr*!ih@cap9*k&7e0x(5vc_--ej%j8%cpd_%xl1$a
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [
@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
     "djoser",
     "django_filters",
     "api",
@@ -108,19 +109,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 5,
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.LimitPageNumberPagination',
 }
 
 AUTH_USER_MODEL = 'api.User'
 
-SIMPLE_JWT = {
-   'ACCESS_TOKEN_LIFETIME': timedelta(days=90),
-   'AUTH_HEADER_TYPES': ('Bearer',),
+DJOSER = {
+    "HIDE_USERS": True,
+    "LOGIN_FIELD": "email"
 }

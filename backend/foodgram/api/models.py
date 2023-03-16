@@ -9,6 +9,9 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
 
+    class Meta:
+        ordering = ('id',)
+
 
 class Tag(models.Model):
     slug = models.SlugField(unique=True, max_length=200)
@@ -31,6 +34,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name='recipes',
     )
     name = models.CharField(max_length=50)
     image = models.ImageField()
@@ -67,3 +71,6 @@ class Follow(models.Model):
 
     class Meta:
         unique_together = ('author', 'follower')
+
+    def __str__(self):
+        return f'{self.follower} подписан на {self.author}'
