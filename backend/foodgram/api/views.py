@@ -4,10 +4,11 @@ from rest_framework import viewsets, filters, mixins, pagination, status, \
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Ingredient, Tag, User, Follow, Recipe
+from .models import Ingredient, Tag, User, Follow, Recipe, Favorite
 from .serializers import (IngredientSerializer, TagSerializer, UserSerializer,
                           SetPasswordSerializer, CreateUserSerializator,
-                          SubsciptionsSerializer, RecipeSerializer)
+                          SubsciptionsSerializer, RecipeSerializer,
+                          FavoriteSerializer)
 from rest_framework.response import Response
 
 
@@ -65,7 +66,8 @@ class UserViewSet(viewsets.GenericViewSet,
         user = self.request.user
         subscriptions = user.follower.select_related('author').order_by('id')
         pages = self.paginate_queryset(subscriptions)
-        serializer = SubsciptionsSerializer(pages, many=True, context={'request':request})
+        serializer = SubsciptionsSerializer(pages, many=True,
+                                            context={'request': request})
         return self.get_paginated_response(serializer.data)
 
 
@@ -74,6 +76,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
 
-    @action(detail=True, methods=['get'])
-    def favorite(self, request, pk):
-        return Response({1})
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
+    def favorite(self, request, pk=None):
+        user = request.user
+        if request.method == 'POST':
+            if Favorite.objects.filter(user=user, recipe__id=pk).exists():
+                return Response(
+                    {
+                        'error': 'Рецепт уже добавлен в список'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            recipe = get_object_or_404(Recipe, pk=pk)
+            Favorite.objects.create(user=user, recipe=recipe)
+            serializer = FavoriteSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        obj = Favorite.objects.filter(user=user, recipe__id=pk)
+        if obj.exists():
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {
+                'error': 'Рецепт уже удален'
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )

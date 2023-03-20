@@ -1,7 +1,9 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from .models import Ingredient, Tag, User, Follow, Recipe, IngredientQuantity
+from .models import (
+    Ingredient, Tag, User, Follow, Recipe, IngredientQuantity, Favorite
+)
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -132,10 +134,19 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         return amount
 
 
+class FavoriteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ('name', 'image', 'cooking_time', 'id')
+        read_only_fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     author = serializers.SerializerMethodField()
     ingredients = RecipeIngredientSerializer(many=True)
+    is_favorited = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -148,9 +159,17 @@ class RecipeSerializer(serializers.ModelSerializer):
             'image',
             'text',
             'cooking_time',
-            #'is_favorited',
+            'is_favorited',
             #'is_in_shopping_cart',
         )
 
     def get_author(self, obj):
         return UserSerializer(get_object_or_404(User, id=obj.author.id)).data
+
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return False
+        return Favorite.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
