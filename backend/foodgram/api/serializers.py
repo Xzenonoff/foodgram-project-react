@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from .models import Ingredient, Tag, User, Follow, Recipe
+from .models import Ingredient, Tag, User, Follow, Recipe, IngredientQuantity
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -116,3 +116,41 @@ class SubsciptionsSerializer(serializers.ModelSerializer):
     def get_recipes_count(self, obj):
         recipes_quantity = Recipe.objects.filter(author=obj.author).count()
         return recipes_quantity
+
+
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    amount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ingredient
+        fields = ('id', 'name', 'amount', 'measurement_unit')
+
+    def get_amount(self, obj):
+        amount = list(IngredientQuantity.objects.filter(
+            ingredient_id=obj.id
+        ).values('amount'))[0].get('amount')
+        return amount
+
+
+class RecipeSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(many=True)
+    author = serializers.SerializerMethodField()
+    ingredients = RecipeIngredientSerializer(many=True)
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'tags',
+            'author',
+            'ingredients',
+            'name',
+            'image',
+            'text',
+            'cooking_time',
+            #'is_favorited',
+            #'is_in_shopping_cart',
+        )
+
+    def get_author(self, obj):
+        return UserSerializer(get_object_or_404(User, id=obj.author.id)).data

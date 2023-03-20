@@ -24,7 +24,7 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=200)
-    measure_unit = models.CharField(max_length=200)
+    measurement_unit = models.CharField(max_length=200)
 
     def __str__(self):
         return self.name
@@ -38,7 +38,7 @@ class Recipe(models.Model):
     )
     name = models.CharField(max_length=50)
     image = models.ImageField()
-    description = models.TextField()
+    text = models.TextField()
     cooking_time = models.PositiveSmallIntegerField()
     tags = models.ManyToManyField(Tag)
     ingredients = models.ManyToManyField(
@@ -50,11 +50,22 @@ class Recipe(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ['id']
+
 
 class IngredientQuantity(models.Model):
-    quantity = models.DecimalField(max_digits=5, decimal_places=2)
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=5, decimal_places=2)
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='ingredients'
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='recipes'
+    )
 
 
 class Follow(models.Model):

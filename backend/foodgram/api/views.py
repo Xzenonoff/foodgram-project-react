@@ -2,12 +2,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, filters, mixins, pagination, status, \
     generics
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Ingredient, Tag, User, Follow
+from .models import Ingredient, Tag, User, Follow, Recipe
 from .serializers import (IngredientSerializer, TagSerializer, UserSerializer,
-                          SetPasswordSerializer, CreateUserSerializator, SubsciptionsSerializer)
+                          SetPasswordSerializer, CreateUserSerializator,
+                          SubsciptionsSerializer, RecipeSerializer)
 from rest_framework.response import Response
 
 
@@ -54,7 +54,7 @@ class UserViewSet(viewsets.GenericViewSet,
         if serializer.is_valid():
             user.set_password(serializer.data['new_password'])
             user.save()
-            return Response({'status': 'password set'})
+            return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
@@ -69,7 +69,11 @@ class UserViewSet(viewsets.GenericViewSet,
         return self.get_paginated_response(serializer.data)
 
 
-class FavoriteViewSet(viewsets.GenericViewSet,
-                      mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin):
-    pass
+class RecipeViewSet(viewsets.ModelViewSet):
+    http_method_names = ['get', 'post', 'delete', 'patch']
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
+
+    @action(detail=True, methods=['get'])
+    def favorite(self, request, pk):
+        return Response({1})
