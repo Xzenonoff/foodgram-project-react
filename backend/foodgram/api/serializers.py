@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from .models import (
-    Ingredient, Tag, User, Follow, Recipe, IngredientQuantity, Favorite
+    Ingredient, Tag, User, Follow, Recipe, IngredientQuantity, Favorite, Cart
 )
 
 
@@ -108,11 +108,10 @@ class SubsciptionsSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes_limit = request.GET.get('recipes_limit')
+        recipes_limit = request.query_params.get('recipes_limit')
+        recipes = obj.author.recipes.all()
         if recipes_limit:
-            recipes = obj.author.recipes.all()[:int(recipes_limit)]
-        else:
-            recipes = obj.author.recipes.all()
+            recipes = recipes[:int(recipes_limit)]
         return RecipesSerializer(recipes, many=True).data
 
     def get_recipes_count(self, obj):

@@ -1,13 +1,20 @@
+import csv
+import datetime
+
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, filters, mixins, pagination, status, \
     generics
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Ingredient, Tag, User, Follow, Recipe, Favorite
+from .models import Ingredient, Tag, User, Follow, Recipe, Favorite, Cart, \
+    IngredientQuantity
 from .serializers import (IngredientSerializer, TagSerializer, UserSerializer,
                           SetPasswordSerializer, CreateUserSerializator,
                           SubsciptionsSerializer, RecipeSerializer,
+                          RecipesSerializer,
                           FavoriteSerializer)
 from rest_framework.response import Response
 
@@ -62,13 +69,44 @@ class UserViewSet(viewsets.GenericViewSet,
             )
 
     @action(detail=False, methods=['get'])
-    def subsciptions(self, request):
+    def subscriptions(self, request):
         user = self.request.user
         subscriptions = user.follower.select_related('author').order_by('id')
         pages = self.paginate_queryset(subscriptions)
         serializer = SubsciptionsSerializer(pages, many=True,
                                             context={'request': request})
         return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=['post', 'delete'],
+            permission_classes=[IsAuthenticated])
+    def subscribe(self, request, pk=None):
+        user = self.request.user
+        author = get_object_or_404(User, id=pk)
+        if user == author:
+            return Response(
+                {'errors': 'Вы не можете подписываться на самого себя'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if request.method == 'POST':
+            if Follow.objects.filter(follower=user, author=author).exists():
+                return Response(
+                    {'errors': 'Вы уже подписаны на этого пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            author = get_object_or_404(User, id=pk)
+            follower = Follow.objects.create(follower=user, author=author)
+            serializer = SubsciptionsSerializer(follower,
+                                                context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        obj = Follow.objects.filter(follower=user, author=author)
+        if obj.exists():
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {'errors': 'Вы не подписаны на этого пользователя'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -87,7 +125,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if Favorite.objects.filter(user=user, recipe__id=pk).exists():
                 return Response(
                     {
-                        'error': 'Рецепт уже добавлен в список'
+                        'errors': 'Рецепт уже добавлен в список'
                     },
                     status=status.HTTP_400_BAD_REQUEST
                 )
@@ -102,7 +140,57 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
             {
-                'error': 'Рецепт уже удален'
+                'errors': 'Рецепт уже удален'
             },
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    @action(detail=True, methods=['post', 'delete'],
+            permission_classes=[IsAuthenticated])
+    def shopping_cart(self, request, pk=None):
+        user = self.request.user
+        if request.method == 'POST':
+            if Cart.objects.filter(user=user, recipe__id=pk).exists():
+                return Response(
+                    {'errors': 'Этот рецепт уже в корзине'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            recipe = get_object_or_404(Recipe, id=pk)
+            Cart.objects.create(user=user, recipe=recipe)
+            serializer = RecipesSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        obj = Cart.objects.filter(user=user, recipe__id=pk)
+        if obj.exists():
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {'errors': 'Этого рецепта нет в вашей корзине'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @action(detail=False, methods=['get'],
+            permission_classes=[IsAuthenticated])
+    def download_shopping_cart(self, request):
+        user = self.request.user
+        ingredients = IngredientQuantity.objects.filter(
+            recipe__recipes_cart__user=user
+        ).values(
+            'amount', 'ingredient__name', 'ingredient__measurement_unit'
+        ).annotate(
+            ingredient_amount=Sum('amount')).values_list(
+            'ingredient__name',
+            'ingredient_amount',
+            'ingredient__measurement_unit'
+        )
+
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=ShoppingCart.pdf'},
+        )
+        response.write(u'\ufeff'.encode('utf8'))
+        writer = csv.writer(response)
+        for product in list(ingredients):
+            writer.writerow(product)
+        return response
