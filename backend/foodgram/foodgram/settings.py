@@ -1,14 +1,16 @@
 import os
-from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
 
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
+SECRET_KEY = os.getenv(
+    'SECRET_KEY', default='asd_fdojf_fdsafn_kfansskl-dsaknlrvt45357fhrt'
+)
 
-SECRET_KEY = "django-insecure-f$=t9x%r+lr*!ih@cap9*k&7e0x(5vc_--ej%j8%cpd_%xl1$a"
+DEBUG = False
 
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*'])
 
 
 INSTALLED_APPS = [
@@ -59,17 +61,14 @@ WSGI_APPLICATION = "foodgram.wsgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'foodgram_db',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': os.getenv('DB_ENGINE'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT')
     }
 }
-
-# Password validation
-# https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -86,10 +85,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.1/topics/i18n/
-
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
@@ -98,18 +93,13 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.1/howto/static-files/
-
-STATIC_URL = "static/"
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-MEDIA_URL = "media/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -128,3 +118,7 @@ DJOSER = {
     "HIDE_USERS": True,
     "LOGIN_FIELD": "email"
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_URLS_REGEX = r'^/api/.*$'
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1', 'https://',]

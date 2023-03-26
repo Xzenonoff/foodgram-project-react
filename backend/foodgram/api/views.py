@@ -1,21 +1,23 @@
 import csv
-import datetime
 
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, filters, mixins, pagination, status, \
-    generics
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, filters, mixins, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-
-from .models import Ingredient, Tag, User, Follow, Recipe, Favorite, Cart, \
-    IngredientQuantity
-from .serializers import (IngredientSerializer, TagSerializer, UserSerializer,
-                          SetPasswordSerializer, CreateUserSerializator,
-                          SubsciptionsSerializer, RecipeSerializer,
-                          RecipesSerializer,
-                          FavoriteSerializer)
+from rest_framework.permissions import IsAuthenticated, \
+    IsAuthenticatedOrReadOnly
+from .filters import RecipeFilter
+from .permissions import IsAuthorOrReadOnly
+from .models import (
+    Ingredient, Tag, User, Follow, Recipe, Favorite, Cart, IngredientQuantity
+)
+from .serializers import (
+    IngredientSerializer, TagSerializer, UserSerializer, SetPasswordSerializer,
+    CreateUserSerializator, SubsciptionsSerializer, RecipeSerializer,
+    RecipesSerializer, FavoriteSerializer
+)
 from rest_framework.response import Response
 
 
@@ -57,7 +59,10 @@ class UserViewSet(viewsets.GenericViewSet,
     def set_password(self, request, pk=None):
         user = self.request.user
         if user.is_anonymous:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'detail': 'Пользователь не авторизован'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         serializer = SetPasswordSerializer(data=request.data)
         if serializer.is_valid():
             user.set_password(serializer.data['new_password'])
@@ -68,17 +73,25 @@ class UserViewSet(viewsets.GenericViewSet,
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=False, methods=['get'])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
     def subscriptions(self, request):
         user = self.request.user
         subscriptions = user.follower.select_related('author').order_by('id')
         pages = self.paginate_queryset(subscriptions)
-        serializer = SubsciptionsSerializer(pages, many=True,
-                                            context={'request': request})
+        serializer = SubsciptionsSerializer(
+            pages, many=True, context={'request': request}
+        )
         return self.get_paginated_response(serializer.data)
 
-    @action(detail=True, methods=['post', 'delete'],
-            permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
     def subscribe(self, request, pk=None):
         user = self.request.user
         author = get_object_or_404(User, id=pk)
@@ -95,8 +108,9 @@ class UserViewSet(viewsets.GenericViewSet,
                 )
             author = get_object_or_404(User, id=pk)
             follower = Follow.objects.create(follower=user, author=author)
-            serializer = SubsciptionsSerializer(follower,
-                                                context={'request': request})
+            serializer = SubsciptionsSerializer(
+                follower, context={'request': request}
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         obj = Follow.objects.filter(follower=user, author=author)
@@ -110,9 +124,15 @@ class UserViewSet(viewsets.GenericViewSet,
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
     http_method_names = ['get', 'post', 'delete', 'patch']
-    queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
+    queryset = Recipe.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
     @action(
         detail=True,
@@ -145,8 +165,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    @action(detail=True, methods=['post', 'delete'],
-            permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
     def shopping_cart(self, request, pk=None):
         user = self.request.user
         if request.method == 'POST':
@@ -169,8 +192,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    @action(detail=False, methods=['get'],
-            permission_classes=[IsAuthenticated])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
     def download_shopping_cart(self, request):
         user = self.request.user
         ingredients = IngredientQuantity.objects.filter(
@@ -178,7 +204,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ).values(
             'amount', 'ingredient__name', 'ingredient__measurement_unit'
         ).annotate(
-            ingredient_amount=Sum('amount')).values_list(
+            ingredient_amount=Sum('amount')
+        ).values_list(
             'ingredient__name',
             'ingredient_amount',
             'ingredient__measurement_unit'
@@ -187,7 +214,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = HttpResponse(
             content_type='text/csv',
             headers={
-                'Content-Disposition': 'attachment; filename=ShoppingCart.pdf'},
+                'Content-Disposition': 'attachment; filename=ShoppingCart.pdf'}
         )
         response.write(u'\ufeff'.encode('utf8'))
         writer = csv.writer(response)

@@ -1,4 +1,5 @@
-from django.contrib.auth import get_user_model
+from django.core.validators import RegexValidator
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -16,7 +17,13 @@ class User(AbstractUser):
 class Tag(models.Model):
     slug = models.SlugField(unique=True, max_length=200)
     name = models.CharField(max_length=200, unique=True)
-    color = models.CharField(max_length=7, unique=True)
+    color = models.CharField(
+        max_length=7,
+        unique=True,
+        validators=[RegexValidator(
+            r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
+            message='incorrect hex'
+        )],)
 
     def __str__(self):
         return self.name
@@ -94,6 +101,14 @@ class Favorite(models.Model):
         related_name='favorite'
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'user'],
+                name='recipe_user_constraint'
+            )
+        ]
 
 
 class Cart(models.Model):
