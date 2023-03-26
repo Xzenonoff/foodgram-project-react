@@ -1,4 +1,4 @@
-from django_filters import rest_framework, BooleanFilter
+from django_filters import BooleanFilter, rest_framework
 
 from .models import Recipe
 
@@ -17,7 +17,7 @@ class RecipeFilter(rest_framework.FilterSet):
         model = Recipe
         fields = ('author', 'tags')
 
-    def get_favorite(self, queryset, query_param,  value):
+    def get_favorite(self, queryset, query_param, value):
         user = self.request.user
         if value:
             queryset = queryset.filter(favorite__user__username=user)

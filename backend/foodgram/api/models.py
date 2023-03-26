@@ -1,6 +1,5 @@
-from django.core.validators import RegexValidator
-
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.db import models
 
 
@@ -119,5 +118,5 @@ class Cart(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='recipes_cart'
+        related_name='recipes_cart',
     )

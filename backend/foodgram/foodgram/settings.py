@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -121,4 +122,4 @@ DJOSER = {
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_URLS_REGEX = r'^/api/.*$'
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1', 'https://',]
+CSRF_TRUSTED_ORIGINS = ('http://127.0.0.1', 'https://',)
