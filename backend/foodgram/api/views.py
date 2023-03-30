@@ -60,9 +60,7 @@ class UserViewSet(DjoserViewSet):
         pagination_class=LimitPageNumberPagination
     )
     def subscriptions(self, request):
-        subscriptions = self.request.user.follower.select_related(
-            'author'
-        ).order_by('id')
+        subscriptions = User.objects.filter(following__follower=request.user)
         pages = self.paginate_queryset(subscriptions)
         serializer = SubsciptionsSerializer(
             pages, many=True, context={'request': request}
@@ -101,29 +99,6 @@ class UserViewSet(DjoserViewSet):
         )
 
 
-def create_or_delete_obj(request, user, pk, model):
-    if request.method == 'POST':
-        recipe = get_object_or_404(Recipe, pk=pk)
-        model.objects.get_or_create(user=user, recipe=recipe)
-        serializer = RecipesAndFavoriteSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    obj = model.objects.filter(user=user, recipe__id=pk)
-    if obj.exists():
-        obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    error_message = (
-        'Рецепт уже удален'
-        if model == Favorite else 'Этого рецепта нет в вашей корзине'
-    )
-    return Response(
-        {
-            'errors': error_message
-        },
-        status=status.HTTP_400_BAD_REQUEST
-    )
-
-
 class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly, IsAdminOrAuthorOrReadOnly)
     http_method_names = ('get', 'post', 'delete', 'patch',)
@@ -142,7 +117,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def favorite(self, request, pk=None):
-        return create_or_delete_obj(request, request.user, pk, Favorite)
+        if request.method == 'POST':
+            return self.create_obj(request.user, pk, Favorite)
+        return self.delete_obj(request.user, pk, Favorite)
 
     @action(
         detail=True,
@@ -150,7 +127,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
-        return create_or_delete_obj(request, request.user, pk, Cart)
+        if request.method == 'POST':
+            return self.create_obj(request.user, pk, Cart)
+        return self.delete_obj(request.user, pk, Cart)
 
     @action(
         detail=False,
@@ -181,3 +160,32 @@ class RecipeViewSet(viewsets.ModelViewSet):
         for product in list(ingredients):
             writer.writerow(product)
         return response
+
+    @staticmethod
+    def create_obj(user, pk, model):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        _, created = model.objects.get_or_create(user=user, recipe=recipe)
+        if created:
+            serializer = RecipesAndFavoriteSerializer(recipe)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response({'errors': 'Этот рецепт уже добавлен'})
+
+    @staticmethod
+    def delete_obj(user, pk, model):
+        obj = model.objects.filter(user=user, recipe__id=pk)
+        if obj.exists():
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        error_message = (
+            'Рецепт уже удален'if model == Favorite else
+            'Этого рецепта нет в вашей корзине'
+        )
+        return Response(
+            {
+                'errors': error_message
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )

@@ -5,6 +5,16 @@ from rest_framework import serializers, status
 from .models import (
     Cart, Favorite, Follow, Ingredient, IngredientQuantity, Recipe, Tag, User
 )
+from .utils import check_user_and_request
+
+USER_SERIALIZER_FIELDS = (
+    'id',
+    'email',
+    'username',
+    'first_name',
+    'last_name',
+    'is_subscribed',
+)
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -25,14 +35,7 @@ class UserSerializer(DjoserSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
-        fields = (
-            'id',
-            'email',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-        )
+        fields = USER_SERIALIZER_FIELDS
         model = User
         read_only_fields = ('is_subscribed',)
 
@@ -50,7 +53,7 @@ class RecipesAndFavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time',)
-        read_only_fields = ('id', 'name', 'image', 'cooking_time',)
+        read_only_fields = fields
 
 
 class SubsciptionsSerializer(serializers.ModelSerializer):
@@ -60,12 +63,7 @@ class SubsciptionsSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
+            *USER_SERIALIZER_FIELDS,
             'recipes',
             'recipes_count',
         )
@@ -117,12 +115,6 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientQuantity
         fields = ('id', 'name', 'measurement_unit', 'amount')
-
-
-def check_user_and_request(request):
-    if request is None or request.user.is_anonymous:
-        return False
-    return True, request.user
 
 
 class RecipeSerializer(serializers.ModelSerializer):
