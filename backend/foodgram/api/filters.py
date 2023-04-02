@@ -22,13 +22,11 @@ class RecipeFilter(rest_framework.FilterSet):
         if value:
             queryset = queryset.filter(favorite__user__username=user)
             return queryset
-        queryset = queryset.exclude(favorite__user__username=user)
-        return queryset
+        return queryset.exclude(favorite__user__username=user)
 
     def get_shopping(self, queryset, query_param, value):
         user = self.request.user
         if value:
             queryset = queryset.filter(recipes_cart__user__username=user)
             return queryset
-        queryset = queryset.exclude(recipes_cart__user__username=user)
-        return queryset
+        return queryset.exclude(recipes_cart__user__username=user)

@@ -7,21 +7,18 @@ from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserViewSet
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import (
-    IsAuthenticated, IsAuthenticatedOrReadOnly
-)
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
 from .filters import RecipeFilter
-from .models import (
-    Cart, Favorite, Follow, Ingredient, IngredientQuantity, Recipe, Tag, User
-)
+from .models import (Cart, Favorite, Follow, Ingredient, IngredientQuantity,
+                     Recipe, Tag, User)
 from .pagination import LimitPageNumberPagination
 from .permissions import IsAdminOrAuthorOrReadOnly
-from .serializers import (
-    IngredientSerializer, RecipesAndFavoriteSerializer, RecipeSerializer,
-    SubsciptionsSerializer, TagSerializer, UserSerializer
-)
+from .serializers import (IngredientSerializer, RecipesAndFavoriteSerializer,
+                          RecipeSerializer, SubsciptionsSerializer,
+                          TagSerializer, UserSerializer)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):

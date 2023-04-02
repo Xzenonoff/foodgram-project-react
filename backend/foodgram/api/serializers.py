@@ -3,9 +3,8 @@ from djoser.serializers import UserSerializer as DjoserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers, status
 
-from .models import (
-    Cart, Favorite, Follow, Ingredient, IngredientQuantity, Recipe, Tag, User
-)
+from .models import (Cart, Favorite, Follow, Ingredient, IngredientQuantity,
+                     Recipe, Tag, User)
 from .utils import check_user_and_request
 
 USER_SERIALIZER_FIELDS = (
@@ -95,8 +94,7 @@ class SubsciptionsSerializer(serializers.ModelSerializer):
         return RecipesAndFavoriteSerializer(recipes, many=True).data
 
     def get_recipes_count(self, obj):
-        recipes_quantity = Recipe.objects.filter(author=obj).count()
-        return recipes_quantity
+        return Recipe.objects.filter(author=obj).count()
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
