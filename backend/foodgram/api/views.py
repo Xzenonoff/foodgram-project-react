@@ -149,7 +149,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient_amount',
             'ingredient__measurement_unit'
         )
-
         response = HttpResponse(
             content_type='text/csv',
             headers={

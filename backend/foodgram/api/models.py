@@ -85,7 +85,7 @@ class Recipe(models.Model):
         validators=(
             MinValueValidator(
                 MIN_VALUE_1,
-                message='Минимальное время приготовления - 1 мин.'
+                message=f'Минимальное время приготовления - {MIN_VALUE_1} мин.'
             ),
         ),
     )
@@ -126,7 +126,7 @@ class IngredientQuantity(models.Model):
         validators=(
             MinValueValidator(
                 MIN_VALUE_1,
-                message='Мин. количество ингридиентов 1'
+                message=f'Мин. количество ингредиентов {MIN_VALUE_1}'
             ),
         ),
     )

@@ -10,26 +10,25 @@ services:
     volumes:
       - database:/var/lib/postgresql/data/
     env_file:
-      - ./.env
+      - .env
   backend:
-    build:
-      context: ../backend/foodgram/
-      dockerfile: Dockerfile
-
+    image: xzenoff/backend
     restart: always
     volumes:
-      - static_value:/backend/static/
-      - media_value:/backend/media/
+      - static_value:/app/static/
+      - media_value:/app/media/
     depends_on:
       - db
     env_file:
-      - ./.env
+      - .env
+
   frontend:
     build:
       context: ../frontend
       dockerfile: Dockerfile
     volumes:
       - ../frontend/:/app/result_build/
+
   nginx:
     image: nginx:1.19.3
     restart: always

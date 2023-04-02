@@ -9,7 +9,7 @@ SECRET_KEY = os.getenv(
     'SECRET_KEY', default='asd_fdojf_fdsafn_kfansskl-dsaknlrvt45357fhrt'
 )
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*'])
 
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "djoser",
     "django_filters",
     "api",
+    "import_export",
 ]
 
 MIDDLEWARE = [
