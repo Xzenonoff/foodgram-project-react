@@ -2,7 +2,7 @@ from distutils.util import strtobool
 
 from django_filters import rest_framework
 
-from .models import Favorite, Recipe, Cart, Tag
+from .models import Cart, Favorite, Recipe, Tag
 from .utils import check_user_and_request
 
 CHOICES_LIST = (
