@@ -1,19 +1,15 @@
-import csv
-
-from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserViewSet
-from rest_framework import filters, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
 from .filters import RecipeFilter
-from .models import (Cart, Favorite, Follow, Ingredient, IngredientQuantity,
-                     Recipe, Tag, User)
+from .models import Cart, Favorite, Follow, Ingredient, Recipe, Tag, User
 from .pagination import LimitPageNumberPagination
 from .permissions import IsAdminOrAuthorOrReadOnly
 from .serializers import (IngredientSerializer, RecipesAndFavoriteSerializer,
@@ -21,11 +17,11 @@ from .serializers import (IngredientSerializer, RecipesAndFavoriteSerializer,
                           TagSerializer, UserSerializer)
 
 
-class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('name',)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -134,27 +130,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        user = self.request.user
-        ingredients = IngredientQuantity.objects.filter(
-            recipe__recipes_cart__user=user
-        ).values(
-            'amount', 'ingredient__name', 'ingredient__measurement_unit'
-        ).annotate(
-            ingredient_amount=Sum('amount')
-        ).values_list(
-            'ingredient__name',
-            'ingredient_amount',
-            'ingredient__measurement_unit'
+        shopping_cart = Cart.objects.filter(user=request.user).all()
+        shopping_list = {}
+        for item in shopping_cart:
+            for ingredient in item.recipe.recipes.all():
+                name = ingredient.ingredient.name
+                measurement_unit = (
+                    ingredient.ingredient.measurement_unit
+                )
+                amount = ingredient.amount
+                if name not in shopping_list:
+                    shopping_list[name] = {
+                        'name': name,
+                        'measurement_unit': measurement_unit,
+                        'amount': amount
+                    }
+                else:
+                    shopping_list[name]['amount'] += amount
+        content = (
+            [
+                f'{item["name"]}({item["measurement_unit"]})'
+                f'-{item["amount"]}\n'
+                for item in shopping_list.values()
+            ]
         )
-        response = HttpResponse(
-            content_type='text/csv',
-            headers={
-                'Content-Disposition': 'attachment; filename=ShoppingCart.csv'}
+        response = HttpResponse(content, content_type='text/plain')
+        response['Content-Disposition'] = (
+            'attachment; filename={0}'.format('cart.txt')
         )
-        response.write(u'\ufeff'.encode('utf8'))
-        writer = csv.writer(response)
-        for product in list(ingredients):
-            writer.writerow(product)
         return response
 
     @staticmethod
@@ -176,7 +179,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         error_message = (
-            'Рецепт уже удален'if model == Favorite else
+            'Рецепт уже удален' if model == Favorite else
             'Этого рецепта нет в вашей корзине'
         )
         return Response(

@@ -20,8 +20,8 @@ USER_SERIALIZER_FIELDS = (
 class IngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = '__all__'
         model = Ingredient
+        fields = ('id', 'name', 'measurement_unit',)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -146,7 +146,70 @@ class RecipeSerializer(serializers.ModelSerializer):
             'is_in_shopping_cart',
         )
 
+    def create(self, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('recipes')
+        recipe = Recipe.objects.create(**validated_data)
+        try:
+            recipe.tags.set(tags)
+        except Exception as e:
+            recipe.delete()
+            raise e
+        ingredient_recipe = [
+            IngredientQuantity(
+                recipe=recipe,
+                ingredient=Ingredient.objects.get(
+                    id=ingredient.get('ingredient')['id'].id
+                ),
+                amount=ingredient.get('amount')
+            ) for ingredient in ingredients
+        ]
+        try:
+            IngredientQuantity.objects.bulk_create(ingredient_recipe)
+        except Exception as e:
+            recipe.delete()
+            raise e
+        return recipe
+
+    def update(self, instance, validated_data):
+        context = self.context['request']
+        validated_data.pop('recipes')
+
+        tags = context.data['tags']
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get(
+            'cooking_time', instance.cooking_time
+        )
+        instance.image = validated_data.get('image', instance.image)
+        instance.save()
+        instance.tags.set(tags)
+
+        IngredientQuantity.objects.filter(recipe=instance).delete()
+        ingredients = context.data['ingredients']
+        for ingredient in ingredients:
+            ingredient_model = Ingredient.objects.get(id=ingredient['id'])
+            IngredientQuantity.objects.create(
+                recipe=instance,
+                ingredient=ingredient_model,
+                amount=ingredient['amount'],
+            )
+        return instance
+
+    def to_representation(self, instance):
+        representation = super(
+            RecipeSerializer, self
+        ).to_representation(instance)
+        representation['tags'] = instance.tags.all().values(
+            'id', 'name', 'color', 'slug',
+        )
+        return representation
+
     def get_author(self, obj):
+        if self.context.get('request').user.is_anonymous:
+            return UserSerializer(
+                get_object_or_404(User, id=obj.author.id)
+            ).data
         return UserSerializer(
             get_object_or_404(User, id=obj.author.id),
             context=self.context

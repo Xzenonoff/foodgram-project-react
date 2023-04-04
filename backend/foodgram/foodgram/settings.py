@@ -9,7 +9,7 @@ SECRET_KEY = os.getenv(
     'SECRET_KEY', default='asd_fdojf_fdsafn_kfansskl-dsaknlrvt45357fhrt'
 )
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*', '158.160.18.207'])
 
@@ -23,9 +23,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "django_filters",
     "rest_framework.authtoken",
     "djoser",
-    "django_filters",
     "api",
     "import_export",
 ]
@@ -105,7 +105,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [

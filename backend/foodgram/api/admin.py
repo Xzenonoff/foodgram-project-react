@@ -16,11 +16,14 @@ class UserAdmin(admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('author', 'tags', 'name',)
-    list_display = ('name', 'author', 'favorited_counter',)
+    list_display = ('name', 'author', 'favorited_counter', 'tag',)
     search_fields = ('name', 'author__username', 'tags__name',)
 
     def favorited_counter(self, obj):
         return obj.favorite.count()
+
+    def tag(self, obj):
+        return list(Recipe.objects.get(name=obj).tags.all())
 
 
 class IngredientImportResource(resources.ModelResource):
