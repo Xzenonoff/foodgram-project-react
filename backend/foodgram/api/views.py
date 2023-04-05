@@ -20,8 +20,8 @@ from .serializers import (IngredientSerializer, RecipesAndFavoriteSerializer,
 class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [IngredientFilter, ]
-    search_fields = ['^name', ]
+    filter_backends = (IngredientFilter, )
+    search_fields = ('^name', )
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
