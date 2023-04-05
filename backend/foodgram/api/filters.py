@@ -1,6 +1,7 @@
 from distutils.util import strtobool
 
 from django_filters import rest_framework
+from rest_framework.filters import SearchFilter
 
 from .models import Cart, Favorite, Recipe, Tag
 from .utils import check_user_and_request
@@ -61,3 +62,7 @@ class RecipeFilter(rest_framework.FilterSet):
     class Meta:
         model = Recipe
         fields = ('author', 'tags')
+
+
+class IngredientFilter(SearchFilter):
+    search_param = 'name'
